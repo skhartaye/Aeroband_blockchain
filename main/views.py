@@ -631,9 +631,18 @@ def receive_sensor_data(request):
             data = json.loads(request.body)
             print(f"[API] Received data from device: {data}")
             
+            # Get timestamp from ESP32 or use current time
+            esp32_timestamp = data.get('timestamp')
+            if esp32_timestamp is not None:
+                # Convert milliseconds to datetime
+                timestamp = timezone.datetime.fromtimestamp(esp32_timestamp / 1000.0)
+            else:
+                timestamp = timezone.now()
+            
             # Create new sensor reading
             reading = SensorReading.objects.create(
                 device_id=data.get('device_id', 'unknown'),  # Add device_id with a default value
+                timestamp=timestamp,  # Use the ESP32 timestamp
                 temperature=data.get('temperature'),
                 humidity=data.get('humidity'),
                 pressure=data.get('pressure'),

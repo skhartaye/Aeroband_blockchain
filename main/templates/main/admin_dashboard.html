@@ -3,6 +3,7 @@
 <head>
     <title>Aeroband Admin Dashboard</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -91,16 +92,34 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             cursor: pointer;
             transition: transform 0.2s, box-shadow 0.2s;
+            position: relative;
         }
         .sensor-card:hover {
             transform: translateY(-3px);
             box-shadow: 0 4px 8px rgba(0,0,0,0.15);
         }
         .sensor-name {
+            display: flex;
+            align-items: center;
+            gap: 10px;
             font-size: 18px;
             font-weight: bold;
             margin-bottom: 10px;
             color: #333;
+        }
+        .sensor-name i {
+            font-size: 24px;
+            color: #4CAF50;
+        }
+        .sensor-change {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            font-size: 14px;
+            color: #666;
+            background: #f5f5f5;
+            padding: 4px 8px;
+            border-radius: 12px;
         }
         .sensor-value {
             font-size: 24px;
@@ -137,11 +156,6 @@
             font-size: 16px;
             padding: 8px 15px;
             border-left: 4px solid #c62828;
-        }
-        .sensor-change {
-            font-size: 14px;
-            color: #666;
-            margin-top: 5px;
         }
         .timestamp {
             text-align: center;
@@ -413,12 +427,29 @@
         <div class="dashboard-grid" id="dashboard-grid">
             {% for field, data in sensor_data.items %}
             <div class="sensor-card" data-sensor="{{ field }}" onclick="showSensorModal('{{ field }}')">
-                <div class="sensor-name">{{ data.display_name }}</div>
+                <div class="sensor-change" id="{{ field }}-change">
+                    {{ data.change }} ({{ data.change_percent }})
+                </div>
+                <div class="sensor-name">
+                    {% if field == 'temperature' %}
+                        <i class="material-icons">thermostat</i>
+                    {% elif field == 'humidity' %}
+                        <i class="material-icons">water_drop</i>
+                    {% elif field == 'pressure' %}
+                        <i class="material-icons">speed</i>
+                    {% elif field == 'gas_resistance' %}
+                        <i class="material-icons">air</i>
+                    {% elif field == 'ammonia' %}
+                        <i class="material-icons">science</i>
+                    {% elif field == 'pm1_0' or field == 'pm2_5' or field == 'pm10' %}
+                        <i class="material-icons">cloud</i>
+                    {% else %}
+                        <i class="material-icons">sensors</i>
+                    {% endif %}
+                    {{ data.display_name }}
+                </div>
                 <div class="sensor-value" id="{{ field }}-value">{{ data.value|default:"N/A" }}</div>
                 <div class="sensor-status status-{{ data.status|lower }}" id="{{ field }}-status">{{ data.status }}</div>
-                <div class="sensor-change" id="{{ field }}-change">
-                    Change: {{ data.change }} ({{ data.change_percent }})
-                </div>
             </div>
             {% endfor %}
         </div>

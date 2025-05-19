@@ -33,12 +33,20 @@
             border-radius: 10px;
             padding: 15px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            position: relative;  /* For absolute positioning of change indicator */
         }
         .sensor-name {
+            display: flex;
+            align-items: center;
+            gap: 10px;
             font-size: 18px;
             font-weight: bold;
             margin-bottom: 10px;
             color: #333;
+        }
+        .sensor-name i {
+            font-size: 24px;
+            color: #4CAF50;
         }
         .sensor-value {
             font-size: 24px;
@@ -77,9 +85,21 @@
             border-left: 4px solid #c62828;
         }
         .sensor-change {
+            position: absolute;
+            top: 15px;
+            right: 15px;
             font-size: 14px;
-            color: #666;
-            margin-top: 5px;
+            padding: 4px 8px;
+            border-radius: 12px;
+            background: #f5f5f5;
+        }
+        .sensor-change.positive {
+            color: #2e7d32;
+            background: #e8f5e9;
+        }
+        .sensor-change.negative {
+            color: #c62828;
+            background: #ffebee;
         }
         .timestamp {
             text-align: center;
@@ -376,12 +396,29 @@
             <div class="sensor-grid" id="sensor-grid">
                 {% for field, data in sensor_data.items %}
                 <div class="sensor-card" data-sensor="{{ field }}" onclick="showSensorModal('{{ field }}')">
-                    <div class="sensor-name">{{ data.display_name }}</div>
+                    <div class="sensor-change" id="{{ field }}-change">
+                        {{ data.change }} ({{ data.change_percent }})
+                    </div>
+                    <div class="sensor-name">
+                        {% if field == 'temperature' %}
+                            <i class="material-icons">thermostat</i>
+                        {% elif field == 'humidity' %}
+                            <i class="material-icons">water_drop</i>
+                        {% elif field == 'pressure' %}
+                            <i class="material-icons">speed</i>
+                        {% elif field == 'gas_resistance' %}
+                            <i class="material-icons">air</i>
+                        {% elif field == 'ammonia' %}
+                            <i class="material-icons">science</i>
+                        {% elif field == 'pm1_0' or field == 'pm2_5' or field == 'pm10' %}
+                            <i class="material-icons">cloud</i>
+                        {% else %}
+                            <i class="material-icons">sensors</i>
+                        {% endif %}
+                        {{ data.display_name }}
+                    </div>
                     <div class="sensor-value" id="{{ field }}-value">{{ data.value|default:"N/A" }}</div>
                     <div class="sensor-status status-{{ data.status|lower }}" id="{{ field }}-status">{{ data.status }}</div>
-                    <div class="sensor-change" id="{{ field }}-change">
-                        Change: {{ data.change }} ({{ data.change_percent }})
-                    </div>
                 </div>
                 {% endfor %}
             </div>
@@ -637,7 +674,20 @@
                 }
                 
                 if (changeElement) {
-                    changeElement.textContent = `Change: ${sensorData.change} (${sensorData.change_percent})`;
+                    // Remove existing color classes
+                    changeElement.classList.remove('positive', 'negative');
+                    
+                    // Add appropriate color class based on change value
+                    const changeValue = parseFloat(sensorData.change);
+                    if (!isNaN(changeValue)) {
+                        if (changeValue > 0) {
+                            changeElement.classList.add('positive');
+                        } else if (changeValue < 0) {
+                            changeElement.classList.add('negative');
+                        }
+                    }
+                    
+                    changeElement.textContent = ` ${sensorData.change} (${sensorData.change_percent})`;
                 }
             }
             
