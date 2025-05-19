@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Aeroband Redirect</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f0f2f5;
+            padding: 20px;
+        }
+        .container {
+            text-align: center;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            max-width: 500px;
+            width: 100%;
+        }
+        .button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .button:hover {
+            background-color: #45a049;
+        }
+        #status {
+            margin: 10px;
+            color: #666;
+        }
+        .qrcode {
+            margin: 20px auto;
+            padding: 10px;
+            background: white;
+            border-radius: 5px;
+        }
+        .url-display {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            word-break: break-all;
+        }
+        .instructions {
+            text-align: left;
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+        .instructions ol {
+            margin: 0;
+            padding-left: 20px;
+        }
+        .instructions li {
+            margin: 5px 0;
+        }
+        .package-install {
+            margin: 20px auto;
+            padding: 10px;
+            background: white;
+            border-radius: 5px;
+            max-width: 500px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Aeroband</h1>
+        <p id="status">{% if ngrok_url %}✅ Connected!{% else %}❌ No ngrok URL found{% endif %}</p>
+        
+        <div class="instructions">
+            <h3>Quick Access:</h3>
+            <ol>
+                <li>Scan the QR code below with your phone</li>
+                <li>Or copy the URL below</li>
+                <li>Open the link on your mobile device</li>
+            </ol>
+        </div>
+
+        {% if ngrok_url %}
+            {% if qr_code %}
+                <div class="qrcode">
+                    <img src="data:image/png;base64,{{ qr_code }}" alt="QR Code">
+                </div>
+            {% else %}
+                <div class="package-install">
+                    <p>To enable QR code generation, please install the required packages:</p>
+                    <code>pip install qrcode pillow</code>
+                </div>
+            {% endif %}
+
+            <div class="url-display">{{ ngrok_url }}</div>
+            <a href="{{ ngrok_url }}/ble-bridge/" class="button">Connect to ESP32</a>
+            <a href="{{ ngrok_url }}/mobile/" class="button">Go to Dashboard</a>
+        {% endif %}
+    </div>
+
+    <script>
+        // Refresh page every 30 seconds
+        setTimeout(function() {
+            window.location.reload();
+        }, 30000);
+    </script>
+</body>
+</html> 

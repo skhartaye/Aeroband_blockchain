@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Aeroband Mobile Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f0f2f5;
+            padding-bottom: 60px; /* Space for bottom nav */
+        }
+        .container {
+            max-width: 100%;
+            padding: 15px;
+        }
+        .header {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .sensor-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            padding: 10px;
+        }
+        .sensor-card {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .sensor-name {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .sensor-value {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .sensor-status {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 14px;
+            margin: 5px 0;
+        }
+        .status-normal {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            font-weight: bold;
+            font-size: 16px;
+            padding: 8px 15px;
+            border-left: 4px solid #2e7d32;
+        }
+        .status-warning {
+            background-color: #fff3e0;
+            color: #ef6c00;
+            font-weight: bold;
+            font-size: 16px;
+            padding: 8px 15px;
+            border-left: 4px solid #ef6c00;
+        }
+        .status-alert {
+            background-color: #ffebee;
+            color: #c62828;
+            font-weight: bold;
+            font-size: 16px;
+            padding: 8px 15px;
+            border-left: 4px solid #c62828;
+        }
+        .sensor-change {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+        }
+        .timestamp {
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+            margin: 20px 0;
+        }
+        /* Bottom Navigation */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            box-shadow: 0 -2px 4px rgba(0,0,0,0.1);
+        }
+        .bottom-nav a {
+            color: #666;
+            text-decoration: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-size: 12px;
+            cursor: pointer;
+            position: relative; /* For badge positioning */
+        }
+        .bottom-nav a.active {
+            color: #4CAF50;
+        }
+        .bottom-nav i {
+            font-size: 24px;
+            margin-bottom: 4px;
+        }
+        .page {
+            display: none;
+        }
+        .page.active {
+            display: block;
+        }
+        /* BLE Connection UI */
+        .ble-connection {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .ble-status {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        .status-connected {
+            background-color: #4CAF50;
+        }
+        .status-disconnected {
+            background-color: #f44336;
+        }
+        .status-scanning {
+            background-color: #2196F3;
+        }
+        .ble-button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 10px;
+            width: 100%;
+        }
+        .ble-button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .device-list {
+            margin-top: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .device-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+        .device-item:hover {
+            background-color: #f5f5f5;
+        }
+        .device-name {
+            font-weight: bold;
+        }
+        .device-id {
+            color: #666;
+            font-size: 12px;
+        }
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #4CAF50;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        @media (max-width: 600px) {
+            .sensor-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+            backdrop-filter: blur(4px);
+        }
+        
+        .modal-content {
+            background-color: white;
+            margin: 10% auto;
+            width: 90%;
+            max-width: 500px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            padding: 20px;
+            position: relative;
+            animation: modalFade 0.3s ease;
+        }
+        
+        @keyframes modalFade {
+            from {opacity: 0; transform: translateY(-20px);}
+            to {opacity: 1; transform: translateY(0);}
+        }
+        
+        .close-modal {
+            position: absolute;
+            right: 15px;
+            top: 10px;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #666;
+        }
+        
+        .sensor-detail-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 16px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+            color: #333;
+        }
+        
+        .sensor-detail-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #f5f5f5;
+        }
+        
+        .sensor-detail-label {
+            font-weight: 500;
+            color: #555;
+        }
+        
+        .sensor-detail-value {
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .modal-footer {
+            margin-top: 20px;
+            text-align: right;
+        }
+        
+        .sensor-help-section {
+            background-color: #f8f9fa;
+            padding: 15px;
+            margin-top: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #4CAF50;
+        }
+        
+        .sensor-help-title {
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #333;
+        }
+        
+        .threshold-explanation {
+            margin-top: 10px;
+            font-style: italic;
+            color: #666;
+            font-size: 13px;
+        }
+        
+        .recommended-actions {
+            background-color: #fff8e1;
+            padding: 12px 15px;
+            margin-top: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #ff9800;
+        }
+        
+        .recommended-actions.alert {
+            background-color: #fef2f2;
+            border-left-color: #f44336;
+        }
+        
+        .action-item {
+            margin-bottom: 6px;
+            position: relative;
+            padding-left: 20px;
+        }
+        
+        .action-item:before {
+            content: "•";
+            position: absolute;
+            left: 5px;
+            color: #ff9800;
+            font-weight: bold;
+        }
+        
+        .recommended-actions.alert .action-item:before {
+            color: #f44336;
+        }
+        
+        .sensor-card {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .sensor-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+    </style>
+    <!-- Add Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <!-- Add custom alert styles -->
+    <link href="/static/css/alert_styles.css" rel="stylesheet">
+</head>
+<body>
+    <div class="header">
+        <h1>Aeroband</h1>
+    </div>
+
+    <!-- Dashboard Page -->
+    <div id="dashboard-page" class="page active">
+        <div class="container">
+            <!-- BLE Connection Widget -->
+            <div class="ble-connection">
+                <div class="ble-status">
+                    <div id="ble-status-indicator" class="status-indicator status-disconnected"></div>
+                    <div id="ble-status-text">Disconnected</div>
+                </div>
+                <button id="ble-connect-button" class="ble-button">Connect to Device</button>
+                <div id="device-list-container" class="device-list" style="display: none;">
+                    <div id="device-list"></div>
+                </div>
+            </div>
+            
+            <!-- Sensor Grid -->
+            <div class="sensor-grid" id="sensor-grid">
+                {% for field, data in sensor_data.items %}
+                <div class="sensor-card" data-sensor="{{ field }}" onclick="showSensorModal('{{ field }}')">
+                    <div class="sensor-name">{{ data.display_name }}</div>
+                    <div class="sensor-value" id="{{ field }}-value">{{ data.value|default:"N/A" }}</div>
+                    <div class="sensor-status status-{{ data.status|lower }}" id="{{ field }}-status">{{ data.status }}</div>
+                    <div class="sensor-change" id="{{ field }}-change">
+                        Change: {{ data.change }} ({{ data.change_percent }})
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            {% if latest_timestamp %}
+            <div class="timestamp">
+                Last updated: <span id="last-updated-time">{{ latest_timestamp|date:"F j, Y, g:i a" }}</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Alerts Page -->
+    <div id="alerts-page" class="page">
+        <div class="container">
+            <h2>Alerts & Recommendations</h2>
+            <p>View actionable suggestions based on current sensor conditions:</p>
+            <div id="alerts-list">
+                <!-- Alerts will be dynamically populated here -->
+                <div class="no-alerts">
+                    <i class="material-icons">check_circle</i>
+                    <p>All sensors reporting normal conditions.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sensor Detail Modal -->
+    <div id="sensor-modal" class="modal">
+        <div class="modal-content" id="sensor-modal-content">
+            <!-- Modal content will be populated dynamically -->
+        </div>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <div class="bottom-nav">
+        <a href="#" id="nav-dashboard" class="active" onclick="showPage('dashboard')">
+            <i class="material-icons">dashboard</i>
+            <span>Dashboard</span>
+        </a>
+        <a href="#" id="nav-alerts" onclick="showPage('alerts')">
+            <i class="material-icons">notifications</i>
+            <span>Alerts</span>
+            <div id="alerts-badge" class="alerts-badge" style="display: none;">0</div>
+        </a>
+    </div>
+
+    <!-- Add custom alert suggestions script -->
+    <script src="/static/js/sensor_alerts.js"></script>
+    <script>
+        // Page Navigation
+        function showPage(pageId) {
+            // Hide all pages
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.remove('active');
+            });
+            
+            // Show selected page
+            document.getElementById(pageId + '-page').classList.add('active');
+            
+            // Update navigation active state
+            document.querySelectorAll('.bottom-nav a').forEach(navItem => {
+                navItem.classList.remove('active');
+            });
+            document.getElementById('nav-' + pageId).classList.add('active');
+        }
+        
+        // Initialize variables
+        let bleDevice = null;
+        let bleServer = null;
+        let bleService = null;
+        let bleCharacteristic = null;
+        const bleStatusIndicator = document.getElementById('ble-status-indicator');
+        const bleStatusText = document.getElementById('ble-status-text');
+        const bleConnectButton = document.getElementById('ble-connect-button');
+        const deviceListContainer = document.getElementById('device-list-container');
+        const deviceList = document.getElementById('device-list');
+        let refreshTimer = null;
+        let modalRefreshTimer = null;
+        const modalRefreshInterval = 5000; // 5 seconds
+        
+        // BLE Connection
+        bleConnectButton.addEventListener('click', connectToBLE);
+        
+        async function connectToBLE() {
+            try {
+                if (!navigator.bluetooth) {
+                    alert('Bluetooth is not supported in this browser. Please use Chrome, Edge or Opera');
+                    return;
+                }
+                
+                updateStatus('scanning', 'Scanning for devices...');
+                bleConnectButton.disabled = true;
+                
+                // Start device scan
+                deviceListContainer.style.display = 'block';
+                deviceList.innerHTML = '<div style="text-align: center;"><div class="spinner"></div> Scanning for devices...</div>';
+                
+                try {
+                    const device = await navigator.bluetooth.requestDevice({
+                        filters: [
+                            { namePrefix: 'ESP32' }
+                        ],
+                        optionalServices: ['4fafc201-1fb5-459e-8fcc-c5c9c331914b']
+                    });
+                    
+                    bleDevice = device;
+                    device.addEventListener('gattserverdisconnected', onDisconnected);
+                    
+                    updateStatus('scanning', 'Connecting to ' + device.name);
+                    
+                    const server = await device.gatt.connect();
+                    bleServer = server;
+                    
+                    const service = await server.getPrimaryService('4fafc201-1fb5-459e-8fcc-c5c9c331914b');
+                    bleService = service;
+                    
+                    const characteristic = await service.getCharacteristic('beb5483e-36e1-4688-b7f5-ea07361b26a8');
+                    bleCharacteristic = characteristic;
+                    
+                    await characteristic.startNotifications();
+                    characteristic.addEventListener('characteristicvaluechanged', handleBLEData);
+                    
+                    updateStatus('connected', 'Connected to ' + device.name);
+                    bleConnectButton.disabled = false;
+                    bleConnectButton.textContent = 'Disconnect';
+                    bleConnectButton.removeEventListener('click', connectToBLE);
+                    bleConnectButton.addEventListener('click', disconnectBLE);
+                    deviceListContainer.style.display = 'none';
+                    
+                    // Save connected device
+                    localStorage.setItem('lastConnectedDevice', device.id);
+                    
+                } catch (error) {
+                    console.error('Connection error:', error);
+                    updateStatus('disconnected', 'Connection failed: ' + error.message);
+                    bleConnectButton.disabled = false;
+                    deviceListContainer.style.display = 'none';
+                }
+                
+            } catch (error) {
+                console.error('BLE error:', error);
+                updateStatus('disconnected', 'Error: ' + error.message);
+                bleConnectButton.disabled = false;
+                deviceListContainer.style.display = 'none';
+            }
+        }
+        
+        function disconnectBLE() {
+            if (bleDevice && bleDevice.gatt.connected) {
+                if (bleCharacteristic) {
+                    bleCharacteristic.stopNotifications();
+                    bleCharacteristic.removeEventListener('characteristicvaluechanged', handleBLEData);
+                    bleCharacteristic = null;
+                }
+                
+                bleDevice.gatt.disconnect();
+                updateStatus('disconnected', 'Disconnected');
+                bleConnectButton.textContent = 'Connect to Device';
+                bleConnectButton.removeEventListener('click', disconnectBLE);
+                bleConnectButton.addEventListener('click', connectToBLE);
+            }
+        }
+        
+        // Handle disconnection
+        function onDisconnected() {
+            updateStatus('disconnected', 'Device disconnected');
+            bleConnectButton.textContent = 'Connect to Device';
+            bleConnectButton.removeEventListener('click', disconnectBLE);
+            bleConnectButton.addEventListener('click', connectToBLE);
+            bleCharacteristic = null;
+            bleServer = null;
+        }
+        
+        // Current sensor data storage
+        let currentSensorData = {};
+        
+        // Handle incoming BLE data
+        function handleBLEData(event) {
+            const value = event.target.value;
+            const decoder = new TextDecoder('utf-8');
+            const data = JSON.parse(decoder.decode(value));
+            console.log('Received data:', data);
+            
+            // Save data to server and update UI
+            saveSensorData(data).then(() => {
+                refreshData();
+            });
+        }
+        
+        // Send sensor data to server
+        async function saveSensorData(data) {
+            try {
+                const response = await fetch('/api/sensor-data/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                if (response.ok) {
+                    console.log('Data saved successfully');
+                } else {
+                    console.error('Failed to save data');
+                }
+            } catch (error) {
+                console.error('Error saving data:', error);
+            }
+        }
+        
+        // Update BLE connection status
+        function updateStatus(status, message) {
+            bleStatusIndicator.className = 'status-indicator status-' + status;
+            bleStatusText.textContent = message;
+        }
+        
+        async function refreshData() {
+            try {
+                console.log('Refreshing data...');
+                const response = await fetch('/api/latest-sensor-data/');
+                if (response.ok) {
+                    const data = await response.json();
+                    updateSensorUI(data);
+                }
+            } catch (error) {
+                console.error('Error refreshing data:', error);
+            }
+
+            // Set timeout for next refresh (every 5 seconds)
+            setTimeout(refreshData, 5000);
+        }
+        
+        // Update the UI with new sensor data
+        function updateSensorUI(data) {
+            // Update last updated time
+            document.getElementById('last-updated-time').textContent = new Date(data.timestamp).toLocaleString();
+            
+            // Store the current sensor data globally
+            currentSensorData = data.sensor_data;
+            
+            // Update each sensor card
+            for (const [sensorId, sensorData] of Object.entries(data.sensor_data)) {
+                const valueElement = document.getElementById(`${sensorId}-value`);
+                const statusElement = document.getElementById(`${sensorId}-status`);
+                const changeElement = document.getElementById(`${sensorId}-change`);
+                
+                if (valueElement) valueElement.textContent = sensorData.value || 'N/A';
+                
+                if (statusElement) {
+                    statusElement.textContent = sensorData.status;
+                    statusElement.className = `sensor-status status-${sensorData.status.toLowerCase()}`;
+                }
+                
+                if (changeElement) {
+                    changeElement.textContent = `Change: ${sensorData.change} (${sensorData.change_percent})`;
+                }
+            }
+            
+            // Update alerts list and badge
+            updateAlertsList(data.sensor_data);
+            updateAlertsBadge(data.sensor_data);
+            
+            // If modal is open, update it too
+            if (sensorModal.style.display === 'block' && window.currentModalSensor) {
+                updateSensorModalContent(window.currentModalSensor);
+            }
+        }
+        
+        // Load initial data
+        window.addEventListener('load', function() {
+            // Initial data load
+            refreshData();
+        });
+
+        // Sensor detail modal functions
+        const sensorModal = document.getElementById('sensor-modal');
+        const sensorModalContent = document.getElementById('sensor-modal-content');
+        
+        function showSensorModal(sensorId) {
+            window.currentModalSensor = sensorId;
+            updateSensorModalContent(sensorId);
+            sensorModal.style.display = 'block';
+            
+            // Start modal auto-refresh
+            startModalRefresh();
+        }
+        
+        function updateSensorModalContent(sensorId) {
+            const sensorData = currentSensorData[sensorId];
+            if (!sensorData) return;
+            
+            // Get sensor specific information
+            const sensorInfo = getSensorInfo(sensorId);
+            
+            // Create modal content
+            let modalHTML = `
+                <div class="sensor-detail-title">${sensorData.display_name} Details</div>
+                <div class="sensor-detail-row">
+                    <span class="sensor-detail-label">Current Value:</span>
+                    <span class="sensor-detail-value">${sensorData.value !== null ? sensorData.value.toFixed(1) : 'N/A'} ${sensorInfo.unit}</span>
+                </div>
+                <div class="sensor-detail-row">
+                    <span class="sensor-detail-label">Status:</span>
+                    <span class="sensor-detail-value status-${sensorData.status.toLowerCase()}">${sensorData.status}</span>
+                </div>
+                <div class="sensor-detail-row">
+                    <span class="sensor-detail-label">Change:</span>
+                    <span class="sensor-detail-value">${sensorData.change} (${sensorData.change_percent}) since last reading</span>
+                </div>
+                <div class="sensor-detail-row">
+                    <span class="sensor-detail-label">Last Updated:</span>
+                    <span class="sensor-detail-value">${new Date().toLocaleTimeString()}</span>
+                </div>
+            `;
+            
+            // Add thresholds section
+            modalHTML += `
+                <div class="sensor-detail-row">
+                    <span class="sensor-detail-label">Warning Range:</span>
+                    <span class="sensor-detail-value">${sensorInfo.warningThresholds}</span>
+                </div>
+                <div class="sensor-detail-row">
+                    <span class="sensor-detail-label">Alert Range:</span>
+                    <span class="sensor-detail-value">${sensorInfo.alertThresholds}</span>
+                </div>
+                <div class="threshold-explanation">
+                    Values outside these ranges will trigger warnings or alerts
+                </div>
+            `;
+            
+            // Add sensor explanation
+            modalHTML += `
+                <div class="sensor-help-section">
+                    <div class="sensor-help-title">About this measurement</div>
+                    <p>${sensorInfo.description}</p>
+                    <p><strong>Normal range:</strong> ${sensorInfo.normalRange}</p>
+                    <p><strong>Why it matters:</strong> ${sensorInfo.importance}</p>
+                </div>
+            `;
+            
+            // Add recommendations if status is Warning or Alert
+            if (sensorData.status === 'Warning' || sensorData.status === 'Alert') {
+                const suggestions = getSensorSuggestions(sensorId, sensorData.status, sensorData.value);
+                if (suggestions) {
+                    modalHTML += `
+                        <div class="recommended-actions ${sensorData.status.toLowerCase()}">
+                            <div class="sensor-help-title">Recommended Actions</div>
+                            ${formatSuggestions(suggestions)}
+                            <p style="margin-top:10px; font-size:12px;">These recommendations are based on current sensor readings and are provided as guidance. Please use your judgment when taking action.</p>
+                        </div>
+                    `;
+                }
+            }
+            
+            // Add footer
+            modalHTML += `
+                <div class="modal-footer">
+                    <button onclick="closeSensorModal()" class="ble-button">Close</button>
+                </div>
+            `;
+            
+            sensorModalContent.innerHTML = modalHTML;
+        }
+        
+        function startModalRefresh() {
+            // Clear any existing timer
+            clearInterval(modalRefreshTimer);
+            
+            // Start new timer to refresh modal content
+            modalRefreshTimer = setInterval(async () => {
+                if (window.currentModalSensor && sensorModal.style.display === 'block') {
+                    // Fetch the latest data
+                    try {
+                        const response = await fetch('/api/latest-sensor-data/');
+                        if (response.ok) {
+                            const data = await response.json();
+                            currentSensorData = data.sensor_data;
+                            updateSensorModalContent(window.currentModalSensor);
+                        }
+                    } catch (error) {
+                        console.error('Error refreshing modal data:', error);
+                    }
+                }
+            }, modalRefreshInterval);
+        }
+        
+        function closeSensorModal() {
+            sensorModal.style.display = 'none';
+            window.currentModalSensor = null;
+            clearInterval(modalRefreshTimer);
+        }
+        
+        // Close modal when clicking outside of it
+        window.onclick = function(event) {
+            if (event.target == sensorModal) {
+                closeSensorModal();
+            }
+        };
+        
+        // Helper function to get sensor information
+        function getSensorInfo(sensorId) {
+            const sensorInfo = {
+                'temperature': {
+                    unit: '°C',
+                    warningThresholds: '> 30°C or < 0°C',
+                    alertThresholds: '> 35°C or < -10°C',
+                    description: 'Temperature measures how hot or cold the environment is. It affects comfort, equipment performance, and safety.',
+                    normalRange: '0°C to 30°C for most indoor environments',
+                    importance: 'Extreme temperatures can damage equipment, affect product quality, and pose health risks.'
+                },
+                'humidity': {
+                    unit: '%',
+                    warningThresholds: '> 70% or < 20%',
+                    alertThresholds: '> 80% or < 10%',
+                    description: 'Humidity measures moisture content in the air. Both high and low humidity can cause problems.',
+                    normalRange: '30% to 60% for most indoor spaces',
+                    importance: 'High humidity promotes mold growth and condensation, while low humidity causes static electricity and dry skin/airways.'
+                },
+                'pressure': {
+                    unit: 'hPa',
+                    warningThresholds: '> 1020 hPa or < 1000 hPa',
+                    alertThresholds: '> 1030 hPa or < 990 hPa',
+                    description: 'Atmospheric pressure affects weather patterns and can impact enclosed environments.',
+                    normalRange: '1000 to 1020 hPa at sea level',
+                    importance: 'Significant pressure changes can indicate weather shifts and affect sensitive equipment or processes.'
+                },
+                'gas_resistance': {
+                    unit: 'Ohms',
+                    warningThresholds: '> 200 Ohms or < 50 Ohms',
+                    alertThresholds: '> 500 Ohms or < 20 Ohms',
+                    description: 'Gas resistance indicates air quality by measuring volatile organic compounds (VOCs) and other gases.',
+                    normalRange: '50 to 200 Ohms',
+                    importance: 'Lower resistance can indicate presence of gases, potentially affecting air quality and health.'
+                },
+                'ammonia': {
+                    unit: 'ppm',
+                    warningThresholds: '> 1 ppm',
+                    alertThresholds: '> 2 ppm',
+                    description: 'Ammonia concentration is measured in parts per million (ppm). It has a strong, distinct odor.',
+                    normalRange: '< 0.5 ppm',
+                    importance: 'Ammonia can irritate respiratory systems and eyes, and at high levels can be hazardous.'
+                },
+                'pm1_0': {
+                    unit: 'μg/m³',
+                    warningThresholds: '> 20 μg/m³',
+                    alertThresholds: '> 50 μg/m³',
+                    description: 'PM1.0 measures ultrafine particulate matter of 1.0 micrometers or smaller in the air.',
+                    normalRange: '< 10 μg/m³',
+                    importance: 'These tiny particles can penetrate deep into lungs and even enter the bloodstream, affecting health.'
+                },
+                'pm2_5': {
+                    unit: 'μg/m³',
+                    warningThresholds: '> 30 μg/m³',
+                    alertThresholds: '> 75 μg/m³',
+                    description: 'PM2.5 measures fine particulate matter of 2.5 micrometers or smaller in the air.',
+                    normalRange: '< 15 μg/m³',
+                    importance: 'These particles can penetrate deep into lungs and cause respiratory and cardiovascular issues.'
+                },
+                'pm10': {
+                    unit: 'μg/m³',
+                    warningThresholds: '> 50 μg/m³',
+                    alertThresholds: '> 150 μg/m³',
+                    description: 'PM10 measures coarse particulate matter of 10 micrometers or smaller in the air.',
+                    normalRange: '< 20 μg/m³',
+                    importance: 'These particles can cause irritation to eyes, nose, and throat, and exacerbate respiratory conditions.'
+                }
+            };
+            
+            return sensorInfo[sensorId] || {
+                unit: '',
+                warningThresholds: 'N/A',
+                alertThresholds: 'N/A',
+                description: 'Information not available for this sensor.',
+                normalRange: 'N/A',
+                importance: 'N/A'
+            };
+        }
+        
+        function formatSuggestions(suggestions) {
+            if (!suggestions || !suggestions.length) return '<p>No specific recommendations available.</p>';
+            
+            let html = '<div>';
+            suggestions.forEach(suggestion => {
+                html += `<div class="action-item">${suggestion}</div>`;
+            });
+            html += '</div>';
+            return html;
+        }
+    </script>
+</body>
+</html> 
