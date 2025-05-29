@@ -1,0 +1,37 @@
+.header-controls {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.btn-icon {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    color: #4CAF50;
+    transition: color 0.3s;
+}
+
+.btn-icon:hover {
+    color: #2e7d32;
+}
+
+.btn-icon.muted {
+    color: #666;
+}
+
+.last-update {
+    color: #666;
+    font-size: 14px;
+}
+
+/* Vibration button specific styles */
+#vibrationToggle.muted {
+    color: #666;
+}
+
+/* Sound button specific styles */
+#soundToggle.muted {
+    color: #666;
+} 

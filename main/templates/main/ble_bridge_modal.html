@@ -1,0 +1,1709 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Aeroband Mobile Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f0f2f5;
+            padding-bottom: 60px; /* Space for bottom nav */
+        }
+        .container {
+            max-width: 100%;
+            padding: 15px;
+        }
+        .header {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .sensor-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 18px;
+            padding: 10px 0 10px 0;
+            margin: 0;
+        }
+        .sensor-card {
+            background: white;
+            border-radius: 10px;
+            padding: 18px 16px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.10);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .sensor-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.13);
+        }
+        .sensor-name {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .sensor-name.pressure-name {
+            font-size: 14px;
+        }
+        .sensor-name i {
+            font-size: 24px;
+            color: #4CAF50;
+        }
+        .sensor-value {
+            font-size: 28px;
+            font-weight: bold;
+            margin: 10px 0 6px 0;
+        }
+        .sensor-status {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 14px;
+            margin: 5px 0 0 0;
+            font-weight: 500;
+        }
+        .status-normal {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            font-weight: bold;
+            font-size: 16px;
+            padding: 8px 15px;
+        }
+        .status-warning {
+            background-color: #fff3e0;
+            color: #ef6c00;
+            font-weight: bold;
+            font-size: 16px;
+            padding: 8px 15px;
+        }
+        .status-alert {
+            background-color: #ffebee;
+            color: #c62828;
+            font-weight: bold;
+            font-size: 16px;
+            padding: 8px 15px;
+        }
+        .sensor-change {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            font-size: 14px;
+            padding: 4px 8px;
+            border-radius: 12px;
+
+        }
+        .sensor-change.positive {
+            color: #2e7d32;
+
+        }
+        .sensor-change.negative {
+            color: #c62828;
+
+        }
+        .timestamp {
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+            margin: 20px 0;
+        }
+        /* Bottom Navigation */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            box-shadow: 0 -2px 4px rgba(0,0,0,0.1);
+        }
+        .bottom-nav a {
+            color: #666;
+            text-decoration: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-size: 12px;
+            cursor: pointer;
+            position: relative; /* For badge positioning */
+        }
+        .bottom-nav a.active {
+            color: #4CAF50;
+        }
+        .bottom-nav i {
+            font-size: 24px;
+            margin-bottom: 4px;
+        }
+        .page {
+            display: none;
+        }
+        .page.active {
+            display: block;
+        }
+        /* BLE Connection UI */
+        .ble-connection {
+            position: relative;
+            z-index: 100;
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .ble-status {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        .status-connected {
+            background-color: #4CAF50;
+        }
+        .status-disconnected {
+            background-color: #f44336;
+        }
+        .status-scanning {
+            background-color: #2196F3;
+        }
+        .ble-button {
+            position: relative;
+            z-index: 101;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 10px;
+            width: 100%;
+            pointer-events: auto;
+        }
+        .ble-button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .device-list {
+            margin-top: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .device-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+        .device-item:hover {
+            background-color: #f5f5f5;
+        }
+        .device-name {
+            font-weight: bold;
+        }
+        .device-id {
+            color: #666;
+            font-size: 12px;
+        }
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #4CAF50;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        @media (max-width: 600px) {
+            .sensor-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+            backdrop-filter: blur(4px);
+        }
+        
+        .modal-content {
+            background-color: white;
+            margin: 10% auto;
+            width: 90%;
+            max-width: 500px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            padding: 20px;
+            position: relative;
+            animation: modalFade 0.3s ease;
+        }
+        
+        @keyframes modalFade {
+            from {opacity: 0; transform: translateY(-20px);}
+            to {opacity: 1; transform: translateY(0);}
+        }
+        
+        .close-modal {
+            position: absolute;
+            right: 15px;
+            top: 10px;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #666;
+        }
+        
+        .sensor-detail-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 16px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+            color: #333;
+        }
+        
+        .sensor-detail-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #f5f5f5;
+        }
+        
+        .sensor-detail-label {
+            font-weight: 500;
+            color: #555;
+        }
+        
+        .sensor-detail-value {
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .modal-footer {
+            margin-top: 20px;
+            text-align: right;
+        }
+        
+        .sensor-help-section {
+            background-color: #f8f9fa;
+            padding: 15px;
+            margin-top: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #4CAF50;
+        }
+        
+        .sensor-help-title {
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #333;
+        }
+        
+        .threshold-explanation {
+            margin-top: 10px;
+            font-style: italic;
+            color: #666;
+            font-size: 13px;
+        }
+        
+        .recommended-actions {
+            background-color: #fff8e1;
+            padding: 12px 15px;
+            margin-top: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #ff9800;
+        }
+        
+        .recommended-actions.alert {
+            background-color: #fef2f2;
+            border-left-color: #f44336;
+        }
+        
+        .action-item {
+            margin-bottom: 6px;
+            position: relative;
+            padding-left: 20px;
+        }
+        
+        .action-item:before {
+            content: "•";
+            position: absolute;
+            left: 5px;
+            color: #ff9800;
+            font-weight: bold;
+        }
+        
+        .recommended-actions.alert .action-item:before {
+            color: #f44336;
+        }
+        
+        .sensor-card {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .sensor-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+
+        #sound-debug {
+            position: relative;
+            z-index: 102;
+            display: none;
+            padding: 10px;
+            margin: 10px;
+            background: #f0f0f0;
+            border-radius: 5px;
+            pointer-events: auto;
+        }
+
+        /* Enhanced Top Notification Styles */
+        .top-notification {
+            display: none;
+            position: fixed;
+            top: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            min-width: 340px;
+            max-width: 90vw;
+            box-shadow: 0 6px 24px rgba(0,0,0,0.18), 0 1.5px 6px rgba(0,0,0,0.08);
+            border-radius: 16px;
+            z-index: 1000;
+            font-weight: 700;
+            color: #333;
+            background: #fff;
+            display: flex;
+            align-items: stretch;
+            padding: 0;
+            overflow: visible;
+            border-left: 8px solid #ffc107;
+            transition: opacity 0.3s ease, background-color 0.3s ease, border-color 0.3s ease;
+        }
+        .top-notification.alert {
+            border-left: 8px solid #dc3545;
+            background: #ffebee;
+        }
+        .top-notification.warning {
+            border-left: 8px solid #ffc107;
+            background: #fffbe6;
+        }
+        .top-notification .notif-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            width: 56px;
+            min-width: 56px;
+            color: #ef6c00;
+            background: none;
+            margin: 0;
+            padding: 0;
+            height: auto;
+            transition: color 0.3s ease;
+        }
+        .top-notification.alert .notif-icon {
+            color: #c62828;
+        }
+        .top-notification .notif-message {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 20px 10px 20px 0;
+            font-size: 18px;
+            color: #2d1400;
+            font-weight: 700;
+            letter-spacing: 0.025em;
+            line-height: 1.6;
+            font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
+            text-shadow: 0 2px 6px rgba(255,255,255,0.22), 0 1px 2px rgba(0,0,0,0.08);
+            word-break: break-word;
+            border-radius: 6px;
+            border: none;
+            outline: 2px solid rgba(255,255,255,0.08);
+            gap: 8px;
+        }
+        .top-notification .notif-section {
+            margin-bottom: 4px;
+        }
+        .top-notification .notif-section-title {
+            font-size: 16px;
+            font-weight: 800;
+            margin-bottom: 2px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: color 0.3s ease;
+        }
+        .top-notification .notif-section-title.warning {
+            color: #7a4f01;
+        }
+        .top-notification .notif-section-list {
+            font-size: 16px;
+            font-weight: 600;
+            color: #2d1400;
+            margin-left: 2px;
+            transition: color 0.3s ease;
+        }
+        .top-notification .notif-section-list.warning {
+            color: #7a4f01;
+        }
+        .top-notification .notif-close {
+            background: none;
+            border: none;
+            color: #b8860b;
+            font-size: 22px;
+            margin: 0 18px 0 10px;
+            cursor: pointer;
+            outline: none;
+            transition: color 0.3s ease, background-color 0.3s ease;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 1px 4px #0001;
+        }
+        .top-notification .notif-close:hover {
+            background: var(--notif-color, #ffc107);
+        }
+        /* Modern Alerts Page Styles (restored) */
+        .alerts-container {
+            background: linear-gradient(135deg, #f8fafc 60%, #e3e9f3 100%);
+            border-radius: 20px;
+            padding: 22px 8px 36px 8px;
+            margin-top: 12px;
+            box-shadow: 0 4px 24px rgba(44,62,80,0.10);
+            min-height: 60vh;
+        }
+        .alerts-heading {
+            font-size: 1.6em;
+            font-weight: 900;
+            color: #1a2233;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            letter-spacing: 0.01em;
+        }
+        .alerts-desc {
+            color: #5a5a5a;
+            font-size: 1.08em;
+            margin-bottom: 22px;
+            font-weight: 500;
+        }
+        .section-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1.15em;
+            font-weight: 800;
+            margin: 18px 0 10px 0;
+            letter-spacing: 0.01em;
+        }
+        .section-label.alert {
+            color: #dc3545;
+        }
+        .section-label.warning {
+            color: #ffc107;
+        }
+        .modern-card {
+            background: #fff;
+            border-radius: 18px;
+            box-shadow: 0 2px 16px rgba(44,62,80,0.10);
+            padding: 22px 18px 18px 18px;
+            margin-bottom: 22px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            transition: box-shadow 0.2s, transform 0.18s;
+            border-left: 0 solid transparent;
+            position: relative;
+            cursor: pointer;
+        }
+        .modern-card:hover, .modern-card:active {
+            box-shadow: 0 6px 24px rgba(44,62,80,0.13);
+            transform: translateY(-2px) scale(1.01);
+        }
+        .modern-card.alert {
+            border-left: 7px solid #dc3545;
+        }
+        .modern-card.warning {
+            border-left: 7px solid #ffc107;
+        }
+        .modern-card .alert-top {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 8px;
+        }
+        .modern-card .alert-label {
+            font-size: 1.13em;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            letter-spacing: 0.01em;
+        }
+        .modern-card .alert-label.status-alert {
+            color: #dc3545;
+        }
+        .modern-card .alert-label.status-warning {
+            color: #ffc107;
+        }
+        .modern-card .alert-value {
+            font-size: 1.13em;
+            font-weight: 700;
+            color: #1a2233;
+            margin-left: 10px;
+        }
+        .modern-card .alert-sensor-name {
+            font-size: 1.08em;
+            font-weight: 600;
+            color: #2a2a2a;
+            margin-bottom: 2px;
+            margin-top: 2px;
+        }
+        .modern-card .alert-timestamp {
+            font-size: 0.97em;
+            color: #888;
+            margin-bottom: 8px;
+        }
+        .modern-card .recommendations-box {
+            background: linear-gradient(90deg, #f9f6e7 80%, #f7f7fa 100%);
+            border-radius: 12px;
+            padding: 14px 14px 10px 14px;
+            margin-top: 12px;
+            width: 100%;
+            box-shadow: 0 1px 4px #0001;
+        }
+        .modern-card.alert .recommendations-box {
+            background: linear-gradient(90deg, #fbeaec 80%, #f7f7fa 100%);
+        }
+        .modern-card .recommendations-title {
+            font-size: 1.04em;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 10px;
+            letter-spacing: 0.01em;
+        }
+        .recommendations-cards {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 2px;
+        }
+        .recommendation-action-card {
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 1px 6px rgba(44,62,80,0.08);
+            padding: 10px 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1em;
+            color: #333;
+            font-weight: 500;
+            border-left: 4px solid #ffc107;
+            min-width: 160px;
+            flex: 1 1 160px;
+            transition: box-shadow 0.2s, border-color 0.2s;
+        }
+        .modern-card.alert .recommendation-action-card {
+            border-left: 4px solid #dc3545;
+            background: #fff6f7;
+        }
+        .modern-card.warning .recommendation-action-card {
+            border-left: 4px solid #ffc107;
+            background: #fffbe6;
+        }
+        .recommendation-action-card i.material-icons {
+            font-size: 20px;
+            color: #ffc107;
+        }
+        .modern-card.alert .recommendation-action-card i.material-icons {
+            color: #dc3545;
+        }
+        .recommendation-action-card:hover, .recommendation-action-card:active {
+            box-shadow: 0 2px 12px #ffc10733;
+            border-color: #ffb300;
+            background: #fffde7;
+        }
+        .modern-card.alert .recommendation-action-card:hover, .modern-card.alert .recommendation-action-card:active {
+            box-shadow: 0 2px 12px #dc354533;
+            border-color: #b71c1c;
+            background: #fff1f2;
+        }
+        .no-alerts.modern-card {
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            background: linear-gradient(90deg, #e8f5e9 80%, #f7f7fa 100%);
+            border-left: 6px solid #4CAF50;
+            box-shadow: 0 2px 10px rgba(44,62,80,0.08);
+        }
+        .no-alerts.modern-card i.material-icons {
+            color: #4CAF50;
+        }
+        .no-alerts.modern-card p {
+            color: #2e7d32;
+            font-size: 1.13em;
+            font-weight: 700;
+            margin: 10px 0 0 0;
+        }
+        @media (max-width: 600px) {
+            .alerts-container {
+                padding: 10px 2px 18px 2px;
+            }
+            .modern-card {
+                padding: 14px 8px 12px 8px;
+            }
+            .recommendations-cards {
+                flex-direction: column;
+                gap: 8px;
+            }
+            .recommendation-action-card {
+                min-width: 0;
+                flex: 1 1 100%;
+            }
+        }
+        /* Alert Styles */
+        .alert-item {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s ease;
+            border-left: 5px solid #ccc;
+        }
+        
+        .alert-item.alert {
+            border-left-color: #f44336;
+            background-color: #fff8f8;
+        }
+        
+        .alert-item.warning {
+            border-left-color: #ff9800;
+            background-color: #fff8f8;
+        }
+        
+        .alert-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .alert-label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-weight: bold;
+        }
+        
+        .alert-label.status-alert {
+            background-color: #ffebee;
+            color: #c62828;
+            font-weight: bold;
+            font-size: 16px;
+            padding: 8px 15px;
+            border-left: 4px solid #c62828;
+        }
+        
+        .alert-label.status-warning {
+            background-color: #fff3e0;
+            color: #ef6c00;
+            font-weight: bold;
+            font-size: 16px;
+            padding: 8px 15px;
+            border-left: 4px solid #ef6c00;
+        }
+        
+        .alert-value {
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .alert-sensor-name {
+            font-size: 1.1em;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .alert-timestamp {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        
+        .recommendations-box {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        
+        .recommendations-title {
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #333;
+        }
+        
+        .recommendations-list {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .no-alerts {
+            text-align: center;
+            padding: 30px;
+            background: #e8f5e9;
+            border-radius: 10px;
+            color: #2e7d32;
+        }
+        
+        .no-alerts i {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+        
+        .no-alerts p {
+            font-size: 1.1em;
+            font-weight: bold;
+            margin: 0;
+        }
+        
+        .section-label {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin: 20px 0 10px 0;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .section-label.alert {
+            color: #f44336;
+        }
+        
+        .section-label.warning {
+            color: #ff9800;
+        }
+    </style>
+    <!-- Add Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <!-- Add custom alert styles -->
+    <link href="/static/css/alert_styles.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Aeroband</h1>
+        </div>
+        
+        <!-- Enhanced notification bar -->
+        <div id="topNotification" class="top-notification">
+            <span class="material-icons notif-icon" id="notifIcon">warning</span>
+            <span class="notif-message" id="notifMessage"></span>
+            <button class="notif-close" id="notifClose" title="Dismiss">&times;</button>
+        </div>
+
+        <div class="dashboard page active">
+            <!-- BLE Connection Widget -->
+            <div class="ble-connection">
+                <div class="ble-status">
+                    <div id="ble-status-indicator" class="status-indicator status-disconnected"></div>
+                    <div id="ble-status-text">Disconnected</div>
+                </div>
+                <button id="ble-connect-button" class="ble-button">Connect to Device</button>
+                <div id="device-list-container" class="device-list" style="display: none;">
+                    <div id="device-list"></div>
+                </div>
+            </div>
+            
+            <!-- Sensor Grid -->
+            <div class="sensor-grid" id="sensor-grid">
+                {% for field, data in sensor_data.items %}
+                <div class="sensor-card" data-sensor="{{ field }}" onclick="showSensorModal('{{ field }}')">
+                    <div class="sensor-change" id="{{ field }}-change">
+                        {{ data.change }} ({{ data.change_percent }})
+                    </div>
+                    <div class="sensor-name {% if field == 'pressure' %}pressure-name{% endif %}">
+                        {% if field == 'temperature' %}
+                            <i class="material-icons">thermostat</i>
+                        {% elif field == 'humidity' %}
+                            <i class="material-icons">water_drop</i>
+                        {% elif field == 'pressure' %}
+                            <i class="material-icons">speed</i>
+                            ATM Pressure
+                        {% elif field == 'gas_resistance' %}
+                            <i class="material-icons">air</i>
+                        {% elif field == 'ammonia' %}
+                            <i class="material-icons">science</i>
+                        {% elif field == 'pm1_0' or field == 'pm2_5' or field == 'pm10' %}
+                            <i class="material-icons">cloud</i>
+                        {% else %}
+                            <i class="material-icons">sensors</i>
+                        {% endif %}
+                        {% if field != 'pressure' %}
+                            {{ data.display_name }}
+                        {% endif %}
+                    </div>
+                    <div class="sensor-value" id="{{ field }}-value">{{ data.value|default:"N/A" }}</div>
+                    <div class="sensor-status status-{{ data.status|lower }}" id="{{ field }}-status">{{ data.status }}</div>
+                </div>
+                {% endfor %}
+            </div>
+
+            {% if latest_timestamp %}
+            <div class="timestamp">
+                Last updated: <span id="last-updated-time">{{ latest_timestamp|date:"F j, Y, g:i a" }}</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Alerts Page -->
+    <div id="alerts-page" class="page">
+        <div class="container">
+            <h2>Alerts & Recommendations</h2>
+            <p>View actionable suggestions based on current sensor conditions:</p>
+            <div id="alerts-list">
+                <!-- Alerts will be dynamically populated here -->
+                <div class="no-alerts">
+                    <i class="material-icons">check_circle</i>
+                    <p>All sensors reporting normal conditions.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sensor Detail Modal -->
+    <div id="sensor-modal" class="modal">
+        <div class="modal-content" id="sensor-modal-content">
+            <!-- Modal content will be populated dynamically -->
+        </div>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <div class="bottom-nav">
+        <a href="#" id="nav-dashboard" class="active" onclick="showPage('dashboard')">
+            <i class="material-icons">dashboard</i>
+            <span>Dashboard</span>
+        </a>
+        <a href="#" id="nav-alerts" onclick="showPage('alerts')">
+            <i class="material-icons">notifications</i>
+            <span>Alerts</span>
+            <div id="alerts-badge" class="alerts-badge" style="display: none;">0</div>
+        </a>
+    </div>
+
+    <!-- Add custom alert suggestions script -->
+    <script src="/static/js/sensor_alerts.js"></script>
+    <script>
+        // Initialize global variables
+        window.currentSensorData = {};
+        window.lastAlertState = {};
+        window.soundEnabled = true;
+        window.alertSound = new Audio('/static/sounds/alert.mp3');
+        window.warningSound = new Audio('/static/sounds/warning.mp3');
+
+        // Add these at the top of your script
+        window._lastNotifType = null;
+        window._lastNotifMsg = null;
+
+        // Helper function to format sensor values
+        function formatSensorValue(sensorId, value) {
+            if (value === null || value === undefined) return 'N/A';
+            
+            const units = {
+                'temperature': '°C',
+                'humidity': '%',
+                'pressure': 'hPa',
+                'gas_resistance': 'Ohms',
+                'ammonia': 'ppm',
+                // 'pm1_0': 'μg/m³',
+                'pm2_5': 'μg/m³',
+                // 'pm10': 'μg/m³'
+            };
+            
+            return `${value.toFixed(1)} ${units[sensorId] || ''}`;
+        }
+
+        // Replace showAlertModal function with showNotification
+        window.showNotification = function(type, message, alertsArr, warningsArr) {
+            const notification = document.getElementById('topNotification');
+            const notifIcon = document.getElementById('notifIcon');
+            const notifMessage = document.getElementById('notifMessage');
+            const notifClose = document.getElementById('notifClose');
+            notifMessage.setAttribute('aria-live', 'polite');
+            let plainMsg = message.replace(/<[^>]+>/g, '');
+            let hasAlert = Array.isArray(alertsArr) && alertsArr.length > 0;
+            let hasWarning = Array.isArray(warningsArr) && warningsArr.length > 0;
+            let notifType = type;
+            let newIcon = '';
+            let newClass = '';
+            let newMsg = '';
+            if (hasAlert && hasWarning) {
+                notifType = 'Alert';
+                newClass = 'alert';
+                newIcon = 'error';
+                newMsg = `
+                    <div class="notif-section">
+                        <div class="notif-section-title"><span class="material-icons" style="font-size:20px;">error</span> Alert${alertsArr.length > 1 ? 's' : ''}</div>
+                        <div class="notif-section-list">${alertsArr.map(a => `<span>${a}</span>`).join('; ')}</div>
+                    </div>
+                    <div class="notif-section">
+                        <div class="notif-section-title warning"><span class="material-icons" style="font-size:20px;">warning</span> Warning${warningsArr.length > 1 ? 's' : ''}</div>
+                        <div class="notif-section-list warning">${warningsArr.map(w => `<span>${w}</span>`).join('; ')}</div>
+                    </div>
+                `;
+            } else if (hasAlert) {
+                notifType = 'Alert';
+                newClass = 'alert';
+                newIcon = 'error';
+                newMsg = alertsArr.join('; ');
+            } else if (hasWarning) {
+                notifType = 'Warning';
+                newClass = 'warning';
+                newIcon = 'warning';
+                newMsg = warningsArr.join('; ');
+            } else {
+                newClass = type.toLowerCase();
+                newIcon = type === 'Alert' ? 'error' : 'warning';
+                newMsg = plainMsg;
+            }
+
+            // If notification is not visible, show it
+            if (notification.style.display !== 'flex') {
+                notification.style.display = 'flex';
+                notification.style.opacity = '1';
+                notification.classList.add('show');
+                notifIcon.classList.add('pulse');
+            }
+
+            // Update content and styling without affecting animation
+            window._lastNotifType = notifType;
+            window._lastNotifMsg = newMsg;
+            
+            // Update colors using CSS transitions
+            notification.style.setProperty('--notif-color', newClass === 'alert' ? '#dc3545' : '#ffc107');
+            notification.style.setProperty('--notif-bg', newClass === 'alert' ? '#ffebee' : '#fffbe6');
+            
+            // Update icon and message
+            notifIcon.textContent = newIcon;
+            if (hasAlert && hasWarning) {
+                notifMessage.innerHTML = newMsg;
+            } else {
+                notifMessage.textContent = newMsg;
+            }
+
+            // Play sound if enabled
+            if (window.soundEnabled) {
+                try {
+                    if (notifType === 'Alert') {
+                        window.alertSound.currentTime = 0;
+                        window.alertSound.play().catch(e => {});
+                    } else {
+                        window.warningSound.currentTime = 0;
+                        window.warningSound.play().catch(e => {});
+                    }
+                } catch (error) {}
+            }
+
+            // Update close button handler
+            notifClose.onclick = function() {
+                notification.style.opacity = '0';
+                setTimeout(() => {
+                    notification.style.display = 'none';
+                    window._lastNotifType = null;
+                    window._lastNotifMsg = null;
+                }, 300);
+            };
+
+            // Reset auto-hide timer
+            if (window._notifTimeout) clearTimeout(window._notifTimeout);
+            window._notifTimeout = setTimeout(() => {
+                notification.style.opacity = '0';
+                setTimeout(() => {
+                    notification.style.display = 'none';
+                    window._lastNotifType = null;
+                    window._lastNotifMsg = null;
+                }, 300);
+            }, 5000);
+        };
+
+        // Update the refreshData function to use showNotification instead of showAlertModal
+        function refreshData() {
+            fetch('/api/latest-readings-json/')
+                .then(response => response.json())
+                .then(data => {
+                    const alerts = [];
+                    const warnings = [];
+                    for (const [sensorId, sensorData] of Object.entries(data.sensor_data)) {
+                        if (sensorData.status === 'Alert' || sensorData.status === 'Warning') {
+                            const lastState = window.lastAlertState[sensorId];
+                            const previousState = window.currentSensorData[sensorId];
+                            const shouldShow = !lastState || 
+                                lastState.status !== sensorData.status ||
+                                (previousState && Math.abs((sensorData.value - previousState.value) / previousState.value) > 0.05);
+                            if (shouldShow) {
+                                const message = `${sensorData.display_name}: ${formatSensorValue(sensorId, sensorData.value)}`;
+                                if (sensorData.status === 'Alert') {
+                                    alerts.push(message);
+                                } else {
+                                    warnings.push(message);
+                                }
+                            }
+                        }
+                        window.lastAlertState[sensorId] = {
+                            status: sensorData.status,
+                            value: sensorData.value,
+                            timestamp: Date.now()
+                        };
+                    }
+                    // Show combined notification if both present
+                    if (alerts.length > 0 || warnings.length > 0) {
+                        let notifType = alerts.length > 0 ? 'Alert' : 'Warning';
+                        window.showNotification(notifType, '', alerts, warnings);
+                    }
+                    // Update sensor cards (value, status, change)
+                    for (const [sensorId, sensorData] of Object.entries(data.sensor_data)) {
+                        const valueElement = document.getElementById(`${sensorId}-value`);
+                        if (valueElement) {
+                            valueElement.textContent = formatSensorValue(sensorId, sensorData.value);
+                        }
+                        const statusElement = document.getElementById(`${sensorId}-status`);
+                        if (statusElement) {
+                            statusElement.textContent = sensorData.status;
+                            statusElement.className = `sensor-status status-${sensorData.status.toLowerCase()}`;
+                        }
+                        const changeElement = document.getElementById(`${sensorId}-change`);
+                        if (changeElement) {
+                            changeElement.textContent = `${sensorData.change} (${sensorData.change_percent})`;
+                        }
+                    }
+                    // Update last updated time
+                    if (data.latest_timestamp) {
+                        const lastUpdated = document.getElementById('last-updated-time');
+                        if (lastUpdated) {
+                            lastUpdated.textContent = new Date(data.latest_timestamp).toLocaleString();
+                        }
+                    }
+                    // Store the current sensor data globally
+                    window.currentSensorData = data.sensor_data;
+                    // Update alerts list and badge
+                    updateAlertsList(data.sensor_data);
+                    updateAlertsBadge(data.sensor_data);
+                })
+                .catch(error => console.error('Error fetching data:', error));
+        }
+
+        // Page Navigation
+        function showPage(pageId) {
+            // Hide all pages
+            document.querySelectorAll('.page, .dashboard').forEach(page => {
+                page.classList.remove('active');
+            });
+            // Show selected page
+            if (pageId === 'dashboard') {
+                document.querySelector('.dashboard').classList.add('active');
+            } else {
+                document.getElementById(pageId + '-page').classList.add('active');
+            }
+            // Update navigation active state
+            document.querySelectorAll('.bottom-nav a').forEach(navItem => {
+                navItem.classList.remove('active');
+            });
+            document.getElementById('nav-' + pageId).classList.add('active');
+        }
+        
+        // Initialize variables
+        let bleDevice = null;
+        let bleServer = null;
+        let bleService = null;
+        let bleCharacteristic = null;
+        const bleStatusIndicator = document.getElementById('ble-status-indicator');
+        const bleStatusText = document.getElementById('ble-status-text');
+        const bleConnectButton = document.getElementById('ble-connect-button');
+        const deviceListContainer = document.getElementById('device-list-container');
+        const deviceList = document.getElementById('device-list');
+        let refreshTimer = null;
+        let modalRefreshTimer = null;
+        const refreshInterval = 2000; // 2 seconds
+
+        // BLE Connection
+        bleConnectButton.addEventListener('click', connectToBLE);
+        
+        async function connectToBLE() {
+            try {
+                if (!navigator.bluetooth) {
+                    alert('Bluetooth is not supported in this browser. Please use Chrome, Edge or Opera');
+                    return;
+                }
+                
+                updateStatus('scanning', 'Scanning for devices...');
+                bleConnectButton.disabled = true;
+                
+                // Start device scan
+                deviceListContainer.style.display = 'block';
+                deviceList.innerHTML = '<div style="text-align: center;"><div class="spinner"></div> Scanning for devices...</div>';
+                
+                try {
+                    const device = await navigator.bluetooth.requestDevice({
+                        filters: [
+                            { namePrefix: 'ESP32' }
+                        ],
+                        optionalServices: ['4fafc201-1fb5-459e-8fcc-c5c9c331914b']
+                    });
+                    
+                    bleDevice = device;
+                    device.addEventListener('gattserverdisconnected', onDisconnected);
+                    
+                    updateStatus('scanning', 'Connecting to ' + device.name);
+                    
+                    const server = await device.gatt.connect();
+                    bleServer = server;
+                    
+                    const service = await server.getPrimaryService('4fafc201-1fb5-459e-8fcc-c5c9c331914b');
+                    bleService = service;
+                    
+                    const characteristic = await service.getCharacteristic('beb5483e-36e1-4688-b7f5-ea07361b26a8');
+                    bleCharacteristic = characteristic;
+                    
+                    await characteristic.startNotifications();
+                    characteristic.addEventListener('characteristicvaluechanged', handleBLEData);
+                    
+                    updateStatus('connected', 'Connected to ' + device.name);
+                    bleConnectButton.disabled = false;
+                    bleConnectButton.textContent = 'Disconnect';
+                    bleConnectButton.removeEventListener('click', connectToBLE);
+                    bleConnectButton.addEventListener('click', disconnectBLE);
+                    deviceListContainer.style.display = 'none';
+                    
+                    // Save connected device
+                    localStorage.setItem('lastConnectedDevice', device.id);
+                    
+                    // Start data refresh after successful connection
+                    startRefresh();
+                    
+                } catch (error) {
+                    console.error('Connection error:', error);
+                    updateStatus('disconnected', 'Connection failed: ' + error.message);
+                    bleConnectButton.disabled = false;
+                    deviceListContainer.style.display = 'none';
+                }
+                
+            } catch (error) {
+                console.error('BLE error:', error);
+                updateStatus('disconnected', 'Error: ' + error.message);
+                bleConnectButton.disabled = false;
+                deviceListContainer.style.display = 'none';
+            }
+        }
+        
+        function disconnectBLE() {
+            if (bleDevice && bleDevice.gatt.connected) {
+                if (bleCharacteristic) {
+                    bleCharacteristic.stopNotifications();
+                    bleCharacteristic.removeEventListener('characteristicvaluechanged', handleBLEData);
+                    bleCharacteristic = null;
+                }
+                
+                bleDevice.gatt.disconnect();
+                updateStatus('disconnected', 'Disconnected');
+                bleConnectButton.textContent = 'Connect to Device';
+                bleConnectButton.removeEventListener('click', disconnectBLE);
+                bleConnectButton.addEventListener('click', connectToBLE);
+                
+                // Stop data refresh on disconnect
+                if (refreshTimer) {
+                    clearInterval(refreshTimer);
+                    refreshTimer = null;
+                }
+            }
+        }
+        
+        // Handle disconnection
+        function onDisconnected() {
+            updateStatus('disconnected', 'Device disconnected');
+            bleConnectButton.textContent = 'Connect to Device';
+            bleConnectButton.removeEventListener('click', disconnectBLE);
+            bleConnectButton.addEventListener('click', connectToBLE);
+            bleCharacteristic = null;
+            bleServer = null;
+            
+            // Stop data refresh on disconnect
+            if (refreshTimer) {
+                clearInterval(refreshTimer);
+                refreshTimer = null;
+            }
+        }
+        
+        // Send sensor data to server
+        async function saveSensorData(data) {
+            try {
+                const response = await fetch('/api/sensor-data/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                if (response.ok) {
+                    console.log('Data saved successfully');
+                } else {
+                    console.error('Failed to save data:', response.status);
+                }
+            } catch (error) {
+                console.error('Error saving data:', error);
+            }
+        }
+        
+        // Update BLE connection status
+        function updateStatus(status, message) {
+            bleStatusIndicator.className = 'status-indicator status-' + status;
+            bleStatusText.textContent = message;
+        }
+
+        // Start periodic refresh on page load
+        window.addEventListener('load', function() {
+            startRefresh();
+        });
+
+        function startRefresh() {
+            if (window.refreshTimer) clearInterval(window.refreshTimer);
+            refreshData();
+            window.refreshTimer = setInterval(refreshData, 2000); // 2 seconds
+        }
+
+        // Handle BLE data updates
+        function handleBLEData(event) {
+            const value = event.target.value;
+            const decoder = new TextDecoder('utf-8');
+            const data = JSON.parse(decoder.decode(value));
+            console.log('Received BLE data:', data);
+            
+            // Save data to server and trigger immediate refresh
+            saveSensorData(data).then(() => {
+                refreshData();
+            });
+        }
+
+        // Sensor detail modal functions
+        const sensorModal = document.getElementById('sensor-modal');
+        const sensorModalContent = document.getElementById('sensor-modal-content');
+        
+        function showSensorModal(sensorId) {
+            window.currentModalSensor = sensorId;
+            updateSensorModalContent(sensorId);
+            sensorModal.style.display = 'block';
+            
+            // Start modal auto-refresh
+            startModalRefresh();
+        }
+        
+        function updateSensorModalContent(sensorId) {
+            const sensorData = window.currentSensorData[sensorId];
+            if (!sensorData) return;
+            
+            // Get sensor specific information
+            const sensorInfo = getSensorInfo(sensorId);
+            
+            // Create modal content
+            let modalHTML = `
+                <div class="sensor-detail-title">${sensorData.display_name} Details</div>
+                <div class="sensor-detail-row">
+                    <span class="sensor-detail-label">Current Value:</span>
+                    <span class="sensor-detail-value">${sensorData.value !== null ? sensorData.value.toFixed(1) : 'N/A'} ${sensorInfo.unit}</span>
+                </div>
+                <div class="sensor-detail-row">
+                    <span class="sensor-detail-label">Status:</span>
+                    <span class="sensor-detail-value status-${sensorData.status.toLowerCase()}">${sensorData.status}</span>
+                </div>
+                <div class="sensor-detail-row">
+                    <span class="sensor-detail-label">Change:</span>
+                    <span class="sensor-detail-value">${sensorData.change} (${sensorData.change_percent}) since last reading</span>
+                </div>
+                <div class="sensor-detail-row">
+                    <span class="sensor-detail-label">Last Updated:</span>
+                    <span class="sensor-detail-value">${new Date().toLocaleTimeString()}</span>
+                </div>
+            `;
+            
+            // Add thresholds section
+            modalHTML += `
+                <div class="sensor-detail-row">
+                    <span class="sensor-detail-label">Warning Range:</span>
+                    <span class="sensor-detail-value">${sensorInfo.warningThresholds}</span>
+                </div>
+                <div class="sensor-detail-row">
+                    <span class="sensor-detail-label">Alert Range:</span>
+                    <span class="sensor-detail-value">${sensorInfo.alertThresholds}</span>
+                </div>
+                <div class="threshold-explanation">
+                    Values outside these ranges will trigger warnings or alerts
+                </div>
+            `;
+            
+            // Add sensor explanation
+            modalHTML += `
+                <div class="sensor-help-section">
+                    <div class="sensor-help-title">About this measurement</div>
+                    <p>${sensorInfo.description}</p>
+                    <p><strong>Normal range:</strong> ${sensorInfo.normalRange}</p>
+                    <p><strong>Why it matters:</strong> ${sensorInfo.importance}</p>
+                </div>
+            `;
+            
+            // Add recommendations if status is Warning or Alert
+            if (sensorData.status === 'Warning' || sensorData.status === 'Alert') {
+                const suggestions = getSensorSuggestions(sensorId, sensorData.status, sensorData.value);
+                if (suggestions) {
+                    modalHTML += `
+                        <div class="recommended-actions ${sensorData.status.toLowerCase()}">
+                            <div class="sensor-help-title">Recommended Actions</div>
+                            ${formatSuggestions(suggestions)}
+                            <p style="margin-top:10px; font-size:12px;">These recommendations are based on current sensor readings and are provided as guidance. Please use your judgment when taking action.</p>
+                        </div>
+                    `;
+                }
+            }
+            
+            // Add footer
+            modalHTML += `
+                <div class="modal-footer">
+                    <button onclick="closeSensorModal()" class="ble-button">Close</button>
+                </div>
+            `;
+            
+            sensorModalContent.innerHTML = modalHTML;
+        }
+        
+        function startModalRefresh() {
+            // Clear any existing timer
+            clearInterval(modalRefreshTimer);
+            
+            // Start new timer to refresh modal content
+            modalRefreshTimer = setInterval(async () => {
+                if (window.currentModalSensor && sensorModal.style.display === 'block') {
+                    // Fetch the latest data
+                    try {
+                        const response = await fetch('/api/latest-sensor-data/');
+                        if (response.ok) {
+                            const data = await response.json();
+                            window.currentSensorData = data.sensor_data;
+                            updateSensorModalContent(window.currentModalSensor);
+                        }
+                    } catch (error) {
+                        console.error('Error refreshing modal data:', error);
+                    }
+                }
+            }, refreshInterval);
+        }
+        
+        function closeSensorModal() {
+            sensorModal.style.display = 'none';
+            window.currentModalSensor = null;
+            clearInterval(modalRefreshTimer);
+        }
+        
+        // Close modal when clicking outside of it
+        window.onclick = function(event) {
+            if (event.target == sensorModal) {
+                closeSensorModal();
+            }
+        };
+        
+        // Helper function to get sensor information
+        function getSensorInfo(sensorId) {
+            const sensorInfo = {
+                'Temperature': {
+                    unit: '°C',
+                    warningThresholds: '> 30°C or < 0°C',
+                    alertThresholds: '> 35°C or < -10°C',
+                    description: 'Temperature measures how hot or cold the environment is. It affects comfort, equipment performance, and safety.',
+                    normalRange: '0°C to 30°C for most indoor environments',
+                    importance: 'Extreme temperatures can damage equipment, affect product quality, and pose health risks.'
+                },
+                'Humidity': {
+                    unit: '%',
+                    warningThresholds: '> 70% or < 20%',
+                    alertThresholds: '> 80% or < 10%',
+                    description: 'Humidity measures moisture content in the air. Both high and low humidity can cause problems.',
+                    normalRange: '30% to 60% for most indoor spaces',
+                    importance: 'High humidity promotes mold growth and condensation, while low humidity causes static electricity and dry skin/airways.'
+                },
+                'Atmospheric Pressure': {
+                    unit: 'hPa',
+                    warningThresholds: '> 1020 hPa or < 1000 hPa',
+                    alertThresholds: '> 1030 hPa or < 990 hPa',
+                    description: 'Atmospheric pressure affects weather patterns and can impact enclosed environments.',
+                    normalRange: '1000 to 1020 hPa at sea level',
+                    importance: 'Significant pressure changes can indicate weather shifts and affect sensitive equipment or processes.'
+                },
+                'Gas Resistance': {
+                    unit: 'Ohms',
+                    warningThresholds: ' > 20 Ohms and < 35 ohms',
+                    alertThresholds: ' < 20 Ohms',
+                    description: 'Gas resistance indicates air quality by measuring volatile organic compounds (VOCs) and other gases.',
+                    normalRange: '50 to 200 Ohms',
+                    importance: 'Lower resistance can indicate presence of gases, potentially affecting air quality and health.'
+                },
+                'Ammonia': {
+                    unit: 'ppm',
+                    warningThresholds: '> 1 ppm',
+                    alertThresholds: '> 2 ppm',
+                    description: 'Ammonia concentration is measured in parts per million (ppm). It has a strong, distinct odor.',
+                    normalRange: '< 0.5 ppm',
+                    importance: 'Ammonia can irritate respiratory systems and eyes, and at high levels can be hazardous.'
+                },
+                /* 'pm1_0': {
+                    unit: 'μg/m³',
+                    warningThresholds: '> 20 μg/m³',
+                    alertThresholds: '> 50 μg/m³',
+                    description: 'PM1.0 measures ultrafine particulate matter of 1.0 micrometers or smaller in the air.',
+                    normalRange: '< 10 μg/m³',
+                    importance: 'These tiny particles can penetrate deep into lungs and even enter the bloodstream, affecting health.'
+                }, */
+                'pm2_5': {
+                    unit: 'μg/m³',
+                    warningThresholds: '> 30 μg/m³',
+                    alertThresholds: '> 75 μg/m³',
+                    description: 'PM2.5 measures fine particulate matter of 2.5 micrometers or smaller in the air.',
+                    normalRange: '< 15 μg/m³',
+                    importance: 'These particles can penetrate deep into lungs and cause respiratory and cardiovascular issues.'
+                },
+                /* 'pm10': {
+                    unit: 'μg/m³',
+                    warningThresholds: '> 50 μg/m³',
+                    alertThresholds: '> 150 μg/m³',
+                    description: 'PM10 measures coarse particulate matter of 10 micrometers or smaller in the air.',
+                    normalRange: '< 20 μg/m³',
+                    importance: 'These particles can cause irritation to eyes, nose, and throat, and exacerbate respiratory conditions.'
+                } */
+            };
+            
+            return sensorInfo[sensorId] || {
+                unit: '',
+                warningThresholds: 'N/A',
+                alertThresholds: 'N/A',
+                description: 'Information not available for this sensor.',
+                normalRange: 'N/A',
+                importance: 'N/A'
+            };
+        }
+        
+        function formatSuggestions(suggestions) {
+            if (!suggestions || !suggestions.length) return '<p>No specific recommendations available.</p>';
+            
+            let html = '<div>';
+            suggestions.forEach(suggestion => {
+                html += `<div class="action-item">${suggestion}</div>`;
+            });
+            html += '</div>';
+            return html;
+        }
+
+        // Modify the updateSensorCard function to show modal
+        function updateSensorCard(sensorName, data) {
+            const card = document.getElementById(`${sensorName}-card`);
+            if (!card) return;
+
+            const valueElement = card.querySelector('.sensor-value');
+            const statusElement = card.querySelector('.sensor-status');
+            const changeElement = card.querySelector('.sensor-change');
+            const changePercentElement = card.querySelector('.sensor-change-percent');
+
+            if (valueElement) {
+                valueElement.textContent = formatSensorValue(sensorName, data.value);
+            }
+            if (statusElement) {
+                statusElement.textContent = data.status;
+                statusElement.className = `sensor-status status-${data.status.toLowerCase()}`;
+            }
+            if (changeElement) {
+                changeElement.textContent = data.change;
+            }
+            if (changePercentElement) {
+                changePercentElement.textContent = data.change_percent;
+            }
+
+            // Check for status changes and show modal
+            if (data.status === 'Alert' || data.status === 'Warning') {
+                const lastState = window.lastAlertState[sensorName];
+                const previousState = window.currentSensorData[sensorName];
+                
+                // Show modal if:
+                // 1. No previous alert state exists
+                // 2. Status has changed from previous state
+                // 3. Value has changed significantly (more than 10%)
+                const shouldShowModal = !lastState || 
+                    lastState.status !== data.status ||
+                    (previousState && Math.abs((data.value - previousState.value) / previousState.value) > 0.1);
+                
+                if (shouldShowModal) {
+                    const message = `${data.display_name} is in ${data.status} state. Current value: ${formatSensorValue(sensorName, data.value)}`;
+                    window.showNotification(data.status, message);
+                }
+            }
+            
+            // Update last alert state
+            window.lastAlertState[sensorName] = {
+                status: data.status,
+                value: data.value,
+                timestamp: new Date().getTime()
+            };
+        }
+
+        // Replace updateAlertsList with a simple list style
+        function updateAlertsList(sensorData) {
+            const alertsList = document.getElementById('alerts-list');
+            const alerts = [];
+            const warnings = [];
+            
+            for (const [sensorId, data] of Object.entries(sensorData)) {
+                if (data.status === 'Alert' || data.status === 'Warning') {
+                    const alertItem = {
+                        id: sensorId,
+                        name: data.display_name,
+                        value: formatSensorValue(sensorId, data.value),
+                        status: data.status,
+                        timestamp: new Date().toLocaleString(),
+                        change: data.change,
+                        changePercent: data.change_percent,
+                        recommendations: getSensorSuggestions(sensorId, data.status, data.value)
+                    };
+                    if (data.status === 'Alert') {
+                        alerts.push(alertItem);
+                    } else {
+                        warnings.push(alertItem);
+                    }
+                }
+            }
+            
+            let html = '';
+            if (alerts.length === 0 && warnings.length === 0) {
+                html = `
+                    <div class="no-alerts">
+                        <i class="material-icons">check_circle</i>
+                        <p>All sensors reporting normal conditions.</p>
+                    </div>
+                `;
+            } else {
+                if (alerts.length > 0) {
+                    html += '<div class="section-label alert"><i class="material-icons">error</i> Alerts</div>';
+                    alerts.forEach(alert => {
+                        html += createAlertCard(alert);
+                    });
+                }
+                if (warnings.length > 0) {
+                    if (alerts.length > 0) html += '<hr style="margin: 20px 0;">';
+                    html += '<div class="section-label warning"><i class="material-icons">warning</i> Warnings</div>';
+                    warnings.forEach(warning => {
+                        html += createAlertCard(warning);
+                    });
+                }
+            }
+            
+            alertsList.innerHTML = html;
+            document.querySelectorAll('.alert-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    const sensorId = this.dataset.sensorId;
+                    showSensorModal(sensorId);
+                });
+            });
+        }
+
+        function createAlertCard(alert) {
+            const icon = alert.status === 'Alert' ? 'error' : 'warning';
+            return `
+                <div class="alert-item ${alert.status.toLowerCase()}" data-sensor-id="${alert.id}">
+                    <div class="alert-top">
+                        <span class="alert-label status-${alert.status.toLowerCase()}"><i class="material-icons">${icon}</i>${alert.status}</span>
+                        <span class="alert-value">${alert.value}</span>
+                    </div>
+                    <div class="alert-sensor-name">${alert.name}</div>
+                    <div class="alert-timestamp">${alert.timestamp}</div>
+                    <div class="recommendations-box">
+                        <div class="recommendations-title">Recommended Actions:</div>
+                        <div class="recommendations-list">
+                            ${alert.recommendations.map(rec => `
+                                <div class="action-item">${rec}</div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Add these CSS styles to the existing styles section
+        const styleSheet = document.createElement('style');
+        styleSheet.textContent = `
+            .top-notification {
+                transition: opacity 0.3s ease, background-color 0.3s ease, border-color 0.3s ease;
+                border-left: 8px solid var(--notif-color, #ffc107);
+                background: var(--notif-bg, #fffbe6);
+            }
+            .top-notification .notif-icon {
+                transition: color 0.3s ease;
+                color: var(--notif-color, #ffc107);
+            }
+            .top-notification .notif-section-title {
+                transition: color 0.3s ease;
+                color: var(--notif-color, #ffc107);
+            }
+            .top-notification .notif-section-list {
+                transition: color 0.3s ease;
+            }
+            .top-notification .notif-close {
+                transition: color 0.3s ease, background-color 0.3s ease;
+            }
+            .top-notification .notif-close:hover {
+                background: var(--notif-color, #ffc107);
+            }
+        `;
+        document.head.appendChild(styleSheet);
+    </script>
+</body>
+</html> 

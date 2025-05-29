@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Aeroband Sensor Graphs</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Load Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+    <!-- Add Chart.js Zoom plugin -->
+    <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@1.2.1/dist/chartjs-plugin-zoom.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" integrity="sha512-z3gLpd7yknf1YoNbCzqRKc4qyor8gaKU1qmn+CShxbuBusANI9QpRohGBreCFkKxLhei6S9CQXFEbbKuqLg0DA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f0f2f5;
+            display: flex;
+            min-height: 100vh;
+        }
+        /* Sidebar Styles */
+        .sidebar {
+            width: 250px;
+            background-color: #2c3e50;
+            color: white;
+            padding: 20px 0;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+        }
+        .sidebar-header {
+            padding: 0 20px 20px;
+            border-bottom: 1px solid #34495e;
+        }
+        .sidebar-menu {
+            list-style: none;
+            padding: 0;
+            margin: 20px 0;
+        }
+        .sidebar-menu li {
+            padding: 0;
+        }
+        .sidebar-menu a {
+            color: #ecf0f1;
+            text-decoration: none;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            transition: background-color 0.3s;
+        }
+        .sidebar-menu a i {
+            margin-right: 8px;
+            width: 16px;
+            text-align: center;
+        }
+        .sidebar-menu a:hover {
+            background-color: #34495e;
+        }
+        .sidebar-menu a.active {
+            background-color: #4CAF50;
+        }
+        /* Main Content Styles */
+        .main-content {
+            flex: 1;
+            margin-left: 250px;
+            padding: 20px;
+        }
+        /* Navbar Styles */
+        .navbar {
+            background-color: white;
+            padding: 15px 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .navbar-brand {
+            font-size: 20px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .time-period-badge {
+            background-color: #4CAF50;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 14px;
+            margin-left: 10px;
+        }
+        .navbar-right {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        .navbar-right a {
+            color: #4CAF50;
+            text-decoration: none;
+        }
+        /* Chart Styles */
+        .chart-section {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .chart-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+        }
+        .chart-actions {
+            display: flex;
+            gap: 10px;
+        }
+        .chart-container {
+            height: 300px;
+            position: relative;
+            cursor: grab;  /* Show grab cursor to indicate scrolling */
+        }
+        .chart-container:active {
+            cursor: grabbing;  /* Change to grabbing when actively scrolling */
+        }
+        .scroll-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: #666;
+            gap: 5px;
+            margin-top: 5px;
+        }
+        .scroll-indicator i {
+            font-size: 14px;
+        }
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+        .btn-primary {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .btn-secondary {
+            background-color: #95a5a6;
+            color: white;
+        }
+        .btn:hover {
+            opacity: 0.9;
+        }
+        /* Filter Controls */
+        .filter-controls {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .time-filter {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .time-filter select {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        /* Grid Layout for Charts */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+        /* Responsive Layout */
+        @media (max-width: 992px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 200px;
+            }
+            .main-content {
+                margin-left: 200px;
+            }
+        }
+        /* Chart control buttons */
+        .chart-controls {
+            display: flex;
+            gap: 5px;
+            margin-top: 5px;
+        }
+        .chart-controls button {
+            padding: 4px 8px;
+            font-size: 12px;
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .chart-controls button:hover {
+            background-color: #e9ecef;
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h2>Aeroband</h2>
+            <p>Sensor Graphs</p>
+        </div>
+        <ul class="sidebar-menu">
+            <li>
+                <a href="{% url 'admin_dashboard' %}" class="{% if request.resolver_match.url_name == 'admin_dashboard' %}active{% endif %}">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span>Dashboard</span>
+                </a>
+            </li>
+            <li>
+                <a href="{% url 'data_management' %}" class="{% if request.resolver_match.url_name == 'data_management' %}active{% endif %}">
+                    <i class="fas fa-database"></i>
+                    <span>Data Management</span>
+                </a>
+            </li>
+            <li>
+                <a href="{% url 'sensor_graphs' %}" class="{% if request.resolver_match.url_name == 'sensor_graphs' %}active{% endif %}">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>Sensor Graphs</span>
+                </a>
+            </li>
+            <li>
+                <a href="{% url 'redirect_page' %}" class="{% if request.resolver_match.url_name == 'redirect_page' %}active{% endif %}">
+                    <i class="fas fa-qrcode"></i>
+                    <span>Connect</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Navbar -->
+        <div class="navbar">
+            <div class="navbar-brand">
+                Sensor Graphs
+                <span class="time-period-badge" id="time-period-badge">
+                    {% if time_filter == 1 %}Last Hour{% elif time_filter == 6 %}Last 6 Hours{% elif time_filter == 12 %}Last 12 Hours{% elif time_filter == 24 %}Last 24 Hours{% elif time_filter == 72 %}Last 3 Days{% elif time_filter == 168 %}Last Week{% endif %}
+                </span>
+            </div>
+            <div class="navbar-right">
+                <a href="/ble-bridge">Mobile View</a>
+            </div>
+        </div>
+
+        <!-- Filter Controls -->
+        <div class="filter-controls">
+            <div class="time-filter">
+                <label for="time-filter">Time Period:</label>
+                <select id="time-filter">
+                    <option value="1" {% if time_filter == 1 %}selected{% endif %}>Last Hour</option>
+                    <option value="6" {% if time_filter == 6 %}selected{% endif %}>Last 6 Hours</option>
+                    <option value="12" {% if time_filter == 12 %}selected{% endif %}>Last 12 Hours</option>
+                    <option value="24" {% if time_filter == 24 %}selected{% endif %}>Last 24 Hours</option>
+                    <option value="72" {% if time_filter == 72 %}selected{% endif %}>Last 3 Days</option>
+                    <option value="168" {% if time_filter == 168 %}selected{% endif %}>Last Week</option>
+                </select>
+                <button id="apply-filter" class="btn btn-secondary">Apply</button>
+                <button id="refresh-data" class="btn btn-primary">Refresh Data</button>
+                <span id="refresh-countdown" style="margin-left: 10px; font-size: 12px; color: #666;">Auto-refresh in <span id="countdown">300</span>s</span>
+            </div>
+            <div class="data-info" id="data-info">
+                Displaying {{ aggregated_count }} data points ({{ interval_minutes }}-minute intervals) from {{ readings_count }} readings
+            </div>
+        </div>
+        
+        <!-- Loading Indicator -->
+        <div id="loading-indicator" style="display:none; text-align:center; padding:20px;">
+            <div style="border:4px solid #f3f3f3; border-top:4px solid #4CAF50; border-radius:50%; width:40px; height:40px; animation:spin 1s linear infinite; margin:0 auto;"></div>
+            <div style="margin-top:10px;">Loading data...</div>
+        </div>
+        <style>
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+        </style>
+
+        <!-- Charts Grid -->
+        <div class="charts-grid">
+            <!-- Temperature Chart -->
+            <div class="chart-section">
+                <div class="chart-header">
+                    <div class="chart-title">Temperature (°C)</div>
+                    <div class="chart-actions">
+                        <button class="btn btn-secondary btn-download" data-chart="temperature">Download</button>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="temperature-chart"></canvas>
+                </div>
+            </div>
+
+            <!-- Humidity Chart -->
+            <div class="chart-section">
+                <div class="chart-header">
+                    <div class="chart-title">Humidity (%)</div>
+                    <div class="chart-actions">
+                        <button class="btn btn-secondary btn-download" data-chart="humidity">Download</button>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="humidity-chart"></canvas>
+                </div>
+            </div>
+
+            <!-- Pressure Chart -->
+            <div class="chart-section">
+                <div class="chart-header">
+                    <div class="chart-title">Pressure (hPa)</div>
+                    <div class="chart-actions">
+                        <button class="btn btn-secondary btn-download" data-chart="pressure">Download</button>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="pressure-chart"></canvas>
+                </div>
+            </div>
+
+            <!-- Gas Resistance Chart -->
+            <div class="chart-section">
+                <div class="chart-header">
+                    <div class="chart-title">Gas Resistance (Ohms)</div>
+                    <div class="chart-actions">
+                        <button class="btn btn-secondary btn-download" data-chart="gas-resistance">Download</button>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="gas-resistance-chart"></canvas>
+                </div>
+            </div>
+
+            <!-- Ammonia Chart -->
+            <div class="chart-section">
+                <div class="chart-header">
+                    <div class="chart-title">Ammonia (ppm)</div>
+                    <div class="chart-actions">
+                        <button class="btn btn-secondary btn-download" data-chart="ammonia">Download</button>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="ammonia-chart"></canvas>
+                </div>
+            </div>
+
+            <!-- PM2.5 Chart -->
+            <div class="chart-section">
+                <div class="chart-header">
+                    <div class="chart-title">PM2.5 (μg/m³)</div>
+                    <div class="chart-actions">
+                        <button class="btn btn-secondary btn-download" data-chart="pm2_5">Download</button>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="pm2_5-chart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Chart data from server
+        let chartData = {
+            timestamps: JSON.parse('{{ chart_data.timestamps|safe|escapejs }}'),
+            temperature: JSON.parse('{{ chart_data.temperature|safe|escapejs }}'),
+            humidity: JSON.parse('{{ chart_data.humidity|safe|escapejs }}'),
+            pressure: JSON.parse('{{ chart_data.pressure|safe|escapejs }}'),
+            gas_resistance: JSON.parse('{{ chart_data.gas_resistance|safe|escapejs }}'),
+            ammonia: JSON.parse('{{ chart_data.ammonia|safe|escapejs }}'),
+            pm2_5: JSON.parse('{{ chart_data.pm2_5|safe|escapejs }}')
+        };
+        
+        // Global charts object
+        let charts = {};
+        
+        // Current time filter
+        let currentTimeFilter = parseInt("{{ time_filter }}");
+        
+        // Chart configuration
+        const chartConfig = {
+            type: 'line',
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: {
+                    duration: 500
+                },
+                scales: {
+                    x: {
+                        display: true,
+                        title: {
+                            display: true,
+                            text: 'Time ({{ interval_minutes }}-min intervals)'
+                        },
+                        ticks: {
+                            maxRotation: 0,
+                            autoSkip: true,
+                            maxTicksLimit: 12,
+                            align: 'center'
+                        }
+                    },
+                    y: {
+                        display: true,
+                        beginAtZero: false
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            title: function(tooltipItems) {
+                                return 'Time: ' + tooltipItems[0].label;
+                            }
+                        }
+                    },
+                    zoom: {
+                        pan: {
+                            enabled: true,
+                            mode: 'x',
+                            threshold: 2,  // Lower threshold for easier panning
+                            modifierKey: null  // No need for modifier key to pan
+                        },
+                        zoom: {
+                            wheel: {
+                                enabled: true,
+                            },
+                            pinch: {
+                                enabled: true
+                            },
+                            mode: 'x',
+                            speed: 0.1
+                        },
+                        limits: {
+                            x: {
+                                minRange: 10  // Prevent zooming in too far
+                            }
+                        }
+                    }
+                }
+            }
+        };
+        
+        // Create charts
+        function createChart(elementId, label, data, color) {
+            const ctx = document.getElementById(elementId).getContext('2d');
+            const config = {
+                ...chartConfig,
+                data: {
+                    labels: chartData.timestamps,
+                    datasets: [{
+                        label: label,
+                        data: data,
+                        borderColor: color,
+                        backgroundColor: color + '33',  // Add transparency
+                        fill: true,
+                        tension: 0.2,  // Slight curve for line
+                        pointRadius: 2,
+                        pointHoverRadius: 5
+                    }]
+                }
+            };
+            
+            const chart = new Chart(ctx, config);
+            
+            // Add reset zoom button after chart
+            const chartContainer = document.getElementById(elementId).parentNode;
+            
+            // Add scroll indicator
+            const scrollIndicator = document.createElement('div');
+            scrollIndicator.className = 'scroll-indicator';
+            scrollIndicator.innerHTML = '<span>← Click and drag to scroll →</span>';
+            chartContainer.appendChild(scrollIndicator);
+            
+            const controlsDiv = document.createElement('div');
+            controlsDiv.className = 'chart-controls';
+            controlsDiv.innerHTML = `<button class="reset-zoom-btn" data-chart="${elementId}">Reset Zoom</button>`;
+            chartContainer.appendChild(controlsDiv);
+            
+            // Add event listener to reset zoom button
+            controlsDiv.querySelector('.reset-zoom-btn').addEventListener('click', function() {
+                chart.resetZoom();
+            });
+            
+            return chart;
+        }
+        
+        // Update chart with new data
+        function updateChart(chart, newData, newLabels) {
+            chart.data.labels = newLabels;
+            chart.data.datasets[0].data = newData;
+            chart.update();
+            chart.resetZoom();
+        }
+        
+        // Function to load data via AJAX
+        async function loadChartData(timeFilter) {
+            showLoading(true);
+            try {
+                const response = await fetch(`/api/sensor-graph-data/?time_filter=${timeFilter}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                
+                // Update global data
+                chartData = data.chart_data;
+                
+                // Update each chart
+                updateChart(charts['temperature'], chartData.temperature, chartData.timestamps);
+                updateChart(charts['humidity'], chartData.humidity, chartData.timestamps);
+                updateChart(charts['pressure'], chartData.pressure, chartData.timestamps);
+                updateChart(charts['gas-resistance'], chartData.gas_resistance, chartData.timestamps);
+                updateChart(charts['ammonia'], chartData.ammonia, chartData.timestamps);
+                updateChart(charts['pm2_5'], chartData.pm2_5, chartData.timestamps);
+                
+                // Update the time period badge
+                updateTimePeriodBadge(data.time_filter);
+                
+                // Update data info
+                document.getElementById('data-info').textContent = `Displaying ${data.aggregated_count} data points (${data.interval_minutes}-minute intervals) from ${data.readings_count} readings`;
+                
+                // Update URL without reloading
+                const url = new URL(window.location);
+                url.searchParams.set('time_filter', timeFilter);
+                window.history.pushState({}, '', url);
+                
+                // Update current time filter
+                currentTimeFilter = timeFilter;
+            } catch (error) {
+                console.error('Error loading chart data:', error);
+                alert('Error loading data. Please try again.');
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        // Show/hide loading indicator
+        function showLoading(show) {
+            const loadingIndicator = document.getElementById('loading-indicator');
+            if (loadingIndicator) {
+                loadingIndicator.style.display = show ? 'block' : 'none';
+            }
+        }
+        
+        // Update time period badge
+        function updateTimePeriodBadge(timeFilter) {
+            const badge = document.getElementById('time-period-badge');
+            if (badge) {
+                if (timeFilter === 1) badge.textContent = 'Last Hour';
+                else if (timeFilter === 6) badge.textContent = 'Last 6 Hours';
+                else if (timeFilter === 12) badge.textContent = 'Last 12 Hours';
+                else if (timeFilter === 24) badge.textContent = 'Last 24 Hours';
+                else if (timeFilter === 72) badge.textContent = 'Last 3 Days';
+                else if (timeFilter === 168) badge.textContent = 'Last Week';
+            }
+        }
+        
+        // Initialize charts when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if we have a saved time filter preference
+            const savedTimeFilter = localStorage.getItem('sensorGraphTimeFilter');
+            if (savedTimeFilter && savedTimeFilter !== currentTimeFilter.toString()) {
+                currentTimeFilter = parseInt(savedTimeFilter);
+                // Update the dropdown to match saved preference
+                document.getElementById('time-filter').value = savedTimeFilter;
+                // Load the data for this time period
+                loadChartData(currentTimeFilter);
+            }
+            
+            // Create all charts
+            charts = {
+                'temperature': createChart('temperature-chart', 'Temperature (°C)', chartData.temperature, '#e74c3c'),
+                'humidity': createChart('humidity-chart', 'Humidity (%)', chartData.humidity, '#3498db'),
+                'pressure': createChart('pressure-chart', 'Pressure (hPa)', chartData.pressure, '#9b59b6'),
+                'gas-resistance': createChart('gas-resistance-chart', 'Gas Resistance (Ohms)', chartData.gas_resistance, '#f39c12'),
+                'ammonia': createChart('ammonia-chart', 'Ammonia (ppm)', chartData.ammonia, '#1abc9c'),
+                'pm2_5': createChart('pm2_5-chart', 'PM2.5 (μg/m³)', chartData.pm2_5, '#c0392b')
+            };
+            
+            // Apply filter button click
+            document.getElementById('apply-filter').addEventListener('click', function() {
+                const timeFilter = parseInt(document.getElementById('time-filter').value);
+                // Save preference to localStorage
+                localStorage.setItem('sensorGraphTimeFilter', timeFilter);
+                // Reset auto-refresh timer to 5 minutes from now
+                const nextRefreshTime = Date.now() + (300 * 1000);
+                localStorage.setItem('nextSensorGraphRefresh', nextRefreshTime);
+                loadChartData(timeFilter);
+            });
+            
+            // Refresh data button click
+            document.getElementById('refresh-data').addEventListener('click', function() {
+                // Reset auto-refresh timer to 5 minutes from now
+                const nextRefreshTime = Date.now() + (300 * 1000);
+                localStorage.setItem('nextSensorGraphRefresh', nextRefreshTime);
+                loadChartData(currentTimeFilter);
+            });
+            
+            // Download chart as image
+            document.querySelectorAll('.btn-download').forEach(button => {
+                button.addEventListener('click', function() {
+                    const chartName = this.getAttribute('data-chart');
+                    const chart = charts[chartName];
+                    if (chart) {
+                        const link = document.createElement('a');
+                        link.download = `${chartName}-chart.png`;
+                        link.href = chart.toBase64Image();
+                        link.click();
+                    }
+                });
+            });
+            
+            // Auto-refresh countdown system
+            let countdownSeconds = 300; // Default 5 minutes
+            const countdownElement = document.getElementById('countdown');
+            
+            // Check if we have a saved next refresh time
+            const savedNextRefresh = localStorage.getItem('nextSensorGraphRefresh');
+            if (savedNextRefresh) {
+                const nextRefreshTime = parseInt(savedNextRefresh);
+                const now = Date.now();
+                
+                if (nextRefreshTime > now) {
+                    // Calculate remaining seconds
+                    countdownSeconds = Math.ceil((nextRefreshTime - now) / 1000);
+                } else {
+                    // Refresh time has passed, refresh now and set new time
+                    const nextRefreshTime = Date.now() + (300 * 1000);
+                    localStorage.setItem('nextSensorGraphRefresh', nextRefreshTime);
+                    loadChartData(currentTimeFilter);
+                }
+            } else {
+                // No saved time, set initial refresh time
+                const nextRefreshTime = Date.now() + (300 * 1000);
+                localStorage.setItem('nextSensorGraphRefresh', nextRefreshTime);
+            }
+            
+            // Update countdown display initially
+            if (countdownElement) {
+                countdownElement.textContent = countdownSeconds;
+            }
+            
+            function updateCountdown() {
+                countdownSeconds--;
+                if (countdownElement) {
+                    countdownElement.textContent = countdownSeconds;
+                }
+                
+                if (countdownSeconds <= 0) {
+                    // Reset countdown, set new refresh time, and refresh data
+                    countdownSeconds = 300;
+                    const nextRefreshTime = Date.now() + (300 * 1000);
+                    localStorage.setItem('nextSensorGraphRefresh', nextRefreshTime);
+                    loadChartData(currentTimeFilter);
+                }
+            }
+            
+            // Start countdown timer
+            const countdownInterval = setInterval(updateCountdown, 1000);
+        });
+    </script>
+</body>
+</html> 
